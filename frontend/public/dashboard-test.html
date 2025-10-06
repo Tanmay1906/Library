@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .test-container { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none;
+            padding: 10px 20px; 
+            border-radius: 4px;
+            cursor: pointer; 
+            margin: 5px;
+        }
+        button:hover { 
+            background: #0056b3; 
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .log { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin: 10px 0; 
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Dashboard Test Suite</h1>
+    
+    <div class="test-container">
+        <h3>Step 1: Check Current State</h3>
+        <button onclick="checkCurrentState()">Check Auth State</button>
+        <button onclick="clearAuth()">Clear Auth</button>
+    </div>
+    
+    <div class="test-container">
+        <h3>Step 2: Set Mock Authentication</h3>
+        <button onclick="setMockAuth()">Set Mock Auth</button>
+    </div>
+    
+    <div class="test-container">
+        <h3>Step 3: Test Dashboard Access</h3>
+        <button onclick="testDashboard()">Open Dashboard</button>
+        <button onclick="testDashboardAPI()">Test Dashboard APIs</button>
+    </div>
+    
+    <div class="test-container">
+        <h3>Step 4: Debug Protected Route</h3>
+        <button onclick="debugProtectedRoute()">Debug Route Protection</button>
+    </div>
+    
+    <div id="log" class="log">Ready to test dashboard...\n</div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            logDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function checkCurrentState() {
+            log('🔍 Checking current authentication state...');
+            
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    log(`✅ User found: ${userData.name} (${userData.role})`, 'success');
+                    log(`📧 Email: ${userData.email}`);
+                    log(`🔑 Token: ${token ? 'Present' : 'Missing'}`);
+                } catch (e) {
+                    log('❌ Invalid user data format', 'error');
+                }
+            } else {
+                log('❌ No user authentication found', 'error');
+            }
+        }
+        
+        function clearAuth() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            log('🧹 Authentication cleared', 'success');
+        }
+        
+        function setMockAuth() {
+            log('🔧 Setting mock authentication...');
+            
+            const mockUser = {
+                id: "cmgcpy14b0000phl9qava7d5x",
+                name: "System Administrator",
+                email: "admin@librarymate.com",
+                role: "owner",
+                libraryId: "cmgcpy14b0000phl9qava7d5x"
+            };
+            
+            const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImNtZ2NweTE0YjAwMDBwaGw5cWF2YTdkNXgiLCJyb2xlIjoiTElCUkFSWV9PV05FUiIsImlhdCI6MTc1OTY2ODEzMiwiZXhwIjoxNzYwMjcyOTMyfQ.YWvQRhWE4iUxr_Pz-5WGgtGFkEl73uQZdcHdRT8WszE";
+            
+            localStorage.setItem('user', JSON.stringify(mockUser));
+            localStorage.setItem('token', mockToken);
+            
+            log('✅ Mock authentication set', 'success');
+            log(`👤 User: ${mockUser.name}`);
+            log(`🔑 Role: ${mockUser.role}`);
+        }
+        
+        function testDashboard() {
+            log('🚀 Testing dashboard access...');
+            const user = localStorage.getItem('user');
+            
+            if (!user) {
+                log('❌ No authentication found. Set mock auth first.', 'error');
+                return;
+            }
+            
+            log('📍 Opening dashboard in new tab...');
+            const dashboardWindow = window.open('http://localhost:5173/owner/dashboard', '_blank');
+            
+            if (dashboardWindow) {
+                log('✅ Dashboard window opened', 'success');
+            } else {
+                log('❌ Failed to open dashboard window', 'error');
+            }
+        }
+        
+        async function testDashboardAPI() {
+            log('🔄 Testing dashboard API calls...');
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                log('❌ No token found. Set mock auth first.', 'error');
+                return;
+            }
+            
+            try {
+                // Test students API
+                log('📞 Calling students API...');
+                const studentsResponse = await fetch('http://localhost:4000/api/students', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (studentsResponse.ok) {
+                    const studentsData = await studentsResponse.json();
+                    log(`✅ Students API: ${studentsData.data.length} students found`, 'success');
+                } else {
+                    log(`❌ Students API failed: ${studentsResponse.status}`, 'error');
+                }
+                
+                // Test libraries API
+                log('📞 Calling libraries API...');
+                const librariesResponse = await fetch('http://localhost:4000/api/libraries', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (librariesResponse.ok) {
+                    const librariesData = await librariesResponse.json();
+                    log(`✅ Libraries API: ${librariesData.data.length} libraries found`, 'success');
+                } else {
+                    log(`❌ Libraries API failed: ${librariesResponse.status}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ API test error: ${error.message}`, 'error');
+            }
+        }
+        
+        function debugProtectedRoute() {
+            log('🔍 Debugging protected route behavior...');
+            
+            const user = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            
+            if (!user || !token) {
+                log('❌ Missing authentication - route should redirect to login', 'error');
+                return;
+            }
+            
+            try {
+                const userData = JSON.parse(user);
+                log(`✅ User role: ${userData.role}`);
+                
+                if (userData.role === 'owner') {
+                    log('✅ User has correct role for owner dashboard', 'success');
+                } else {
+                    log(`❌ Wrong role: expected 'owner', got '${userData.role}'`, 'error');
+                }
+                
+                // Test direct navigation
+                log('🧭 Testing direct navigation...');
+                setTimeout(() => {
+                    window.location.href = 'http://localhost:5173/owner/dashboard';
+                }, 1000);
+                
+            } catch (e) {
+                log(`❌ Error parsing user data: ${e.message}`, 'error');
+            }
+        }
+        
+        // Auto-check state on page load
+        window.onload = function() {
+            checkCurrentState();
+        };
+    </script>
+</body>
+</html>

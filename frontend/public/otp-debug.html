@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Debug Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            cursor: pointer;
+            border: none;
+        }
+        button:hover { 
+            background: #0056b3; 
+        }
+        .log { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 10px 0; 
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border-left: 4px solid #007bff;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 OTP Verification Debug</h1>
+        
+        <h3>Step 1: Get OTP (Login)</h3>
+        <input type="email" id="email" placeholder="Email" value="admin@librarymate.com">
+        <input type="password" id="password" placeholder="Password" value="LibraryMate@123">
+        <button onclick="sendOTP()">Send OTP</button>
+        
+        <h3>Step 2: Verify OTP</h3>
+        <input type="text" id="otp" placeholder="Enter OTP (use 0000 for demo)" value="0000">
+        <button onclick="verifyOTP()">Verify OTP</button>
+        
+        <h3>Step 3: Check Result</h3>
+        <button onclick="checkAuth()">Check Auth State</button>
+        <button onclick="goToDashboard()">Go to Dashboard</button>
+        
+        <div id="log" class="log">Ready to debug OTP flow...\n</div>
+        
+        <script>
+            let currentEmail = '';
+            
+            function log(message, type = 'info') {
+                const logDiv = document.getElementById('log');
+                const timestamp = new Date().toLocaleTimeString();
+                const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+                logDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+            
+            async function sendOTP() {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                log('🔄 Sending login request...');
+                
+                try {
+                    const response = await fetch('http://localhost:4000/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password,
+                            role: 'admin'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    log('📧 Login response: ' + JSON.stringify(data, null, 2));
+                    
+                    if (data.success && data.requiresOTP) {
+                        currentEmail = email;
+                        log('✅ OTP sent! Use 0000 as demo OTP', 'success');
+                        if (data.previewURL) {
+                            log('🔗 Preview URL: ' + data.previewURL);
+                        }
+                    } else {
+                        log('❌ Login failed: ' + data.message, 'error');
+                    }
+                } catch (error) {
+                    log('❌ Login error: ' + error.message, 'error');
+                }
+            }
+            
+            async function verifyOTP() {
+                const otp = document.getElementById('otp').value;
+                
+                if (!currentEmail) {
+                    currentEmail = document.getElementById('email').value;
+                }
+                
+                log('🔄 Verifying OTP...');
+                log('📧 Email: ' + currentEmail);
+                log('🔑 OTP: ' + otp);
+                
+                try {
+                    const response = await fetch('http://localhost:4000/api/auth/complete-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: currentEmail,
+                            code: otp,
+                            role: 'admin'
+                        })
+                    });
+                    
+                    log('📥 Response status: ' + response.status);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log('✅ OTP verification response: ' + JSON.stringify(data, null, 2), 'success');
+                        
+                        if (data.success && data.data && data.data.user) {
+                            // Map the user data
+                            const userData = {
+                                id: data.data.user.id,
+                                name: data.data.user.name,
+                                email: data.data.user.email,
+                                role: data.data.user.role === 'LIBRARY_OWNER' ? 'owner' : 'student',
+                                libraryId: data.data.user.libraryId,
+                                phone: data.data.user.phone,
+                                registrationNumber: data.data.user.registrationNumber,
+                                token: data.data.token
+                            };
+                            
+                            // Save to localStorage
+                            localStorage.setItem('user', JSON.stringify(userData));
+                            localStorage.setItem('token', data.data.token);
+                            
+                            log('💾 Auth data saved to localStorage', 'success');
+                            log('👤 User: ' + userData.name + ' (' + userData.role + ')');
+                        } else {
+                            log('❌ Invalid response structure', 'error');
+                        }
+                    } else {
+                        const errorData = await response.json().catch(() => ({}));
+                        log('❌ OTP verification failed: ' + (errorData.message || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    log('❌ OTP verification error: ' + error.message, 'error');
+                }
+            }
+            
+            function checkAuth() {
+                log('🔍 Checking authentication state...');
+                
+                const user = localStorage.getItem('user');
+                const token = localStorage.getItem('token');
+                
+                if (user && token) {
+                    try {
+                        const userData = JSON.parse(user);
+                        log('✅ Authentication found:', 'success');
+                        log('👤 User: ' + userData.name);
+                        log('📧 Email: ' + userData.email);
+                        log('👥 Role: ' + userData.role);
+                        log('🔑 Token: Present');
+                    } catch (e) {
+                        log('❌ Invalid user data format', 'error');
+                    }
+                } else {
+                    log('❌ No authentication found', 'error');
+                    log('👤 User: ' + (user ? 'Present but invalid' : 'Missing'));
+                    log('🔑 Token: ' + (token ? 'Present' : 'Missing'));
+                }
+            }
+            
+            function goToDashboard() {
+                log('🚀 Navigating to dashboard...');
+                window.location.href = 'http://localhost:5173/owner/dashboard';
+            }
+        </script>
+    </div>
+</body>
+</html>

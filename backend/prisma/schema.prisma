@@ -1,0 +1,174 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  phone     String
+  password  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lastLogin DateTime?
+  libraries Library[]
+
+  @@map("admins")
+}
+
+model Library {
+  id          String    @id @default(cuid())
+  name        String
+  adminId     String
+  address     String
+  createdAt   DateTime  @default(now())
+  description String?
+  phone       String
+  updatedAt   DateTime  @updatedAt
+  admin       Admin     @relation(fields: [adminId], references: [id])
+  books       Book[]
+  students    Student[]
+}
+
+model Student {
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  phone              String
+  password           String?
+  registrationNumber String           @unique
+  aadharReference    String
+  joinDate           DateTime         @default(now())
+  dueDate            DateTime?
+  libraryId          String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  subscriptionPlan   SubscriptionPlan @default(MONTHLY)
+  paymentStatus      PaymentStatus    @default(PENDING)
+  borrowHistory      BorrowHistory[]
+  payments           Payment[]
+  library            Library?         @relation(fields: [libraryId], references: [id])
+
+  @@map("students")
+}
+
+model Book {
+  id              String          @id @default(cuid())
+  title           String
+  author          String
+  description     String?
+  content         String?
+  coverUrl        String?
+  fileUrl         String?
+  libraryId       String
+  isAvailable     Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  availableCopies Int             @default(1)
+  isbn            String?         @unique
+  totalCopies     Int             @default(1)
+  category        BookCategory    @default(OTHER)
+  library         Library         @relation(fields: [libraryId], references: [id])
+  borrowHistory   BorrowHistory[]
+
+  @@map("books")
+}
+
+model Payment {
+  id        String           @id @default(cuid())
+  amount    Float
+  date      DateTime         @default(now())
+  studentId String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  status    PaymentStatus    @default(PENDING)
+  plan      SubscriptionPlan
+  method    PaymentMethod
+  student   Student          @relation(fields: [studentId], references: [id])
+
+  @@map("payments")
+}
+
+model BorrowHistory {
+  id         String       @id @default(cuid())
+  studentId  String
+  bookId     String
+  borrowDate DateTime     @default(now())
+  dueDate    DateTime
+  returnDate DateTime?
+  createdAt  DateTime     @default(now())
+  fine       Float?       @default(0)
+  updatedAt  DateTime     @updatedAt
+  status     BorrowStatus @default(BORROWED)
+  book       Book         @relation(fields: [bookId], references: [id])
+  student    Student      @relation(fields: [studentId], references: [id])
+
+  @@map("borrow_history")
+}
+
+model OTP {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  attempts  Int      @default(0)
+  role      UserRole
+
+  @@map("otps")
+}
+
+enum UserRole {
+  ADMIN
+  OWNER
+  STUDENT
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  NET_BANKING
+  WALLET
+}
+
+enum BorrowStatus {
+  BORROWED
+  RETURNED
+  OVERDUE
+  LOST
+}
+
+enum BookCategory {
+  FICTION
+  NON_FICTION
+  SCIENCE
+  TECHNOLOGY
+  HISTORY
+  BIOGRAPHY
+  EDUCATION
+  REFERENCE
+  CHILDREN
+  OTHER
+}

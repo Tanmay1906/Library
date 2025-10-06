@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LibraryMate - Login Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            cursor: pointer; 
+        }
+        button:hover { 
+            background: #0056b3; 
+        }
+        .log { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 10px 0; 
+            border-left: 4px solid #007bff;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .step { 
+            background: #e9ecef; 
+            padding: 10px; 
+            margin: 5px 0; 
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 LibraryMate Login Test</h1>
+        
+        <div class="step">
+            <h3>Step 1: Test Login API</h3>
+            <button onclick="testLogin()">Test Login (Get OTP)</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Test OTP Verification</h3>
+            <input type="text" id="otpInput" placeholder="Enter OTP (use 0000 for demo)" value="0000">
+            <button onclick="testOTPVerification()">Verify OTP</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Test Dashboard Access</h3>
+            <button onclick="testDashboard()">Access Dashboard</button>
+        </div>
+        
+        <div class="step">
+            <h3>Step 4: Check Authentication State</h3>
+            <button onclick="checkAuthState()">Check Auth State</button>
+        </div>
+        
+        <div id="log" class="log">Ready to test...\n</div>
+        
+        <script>
+            let currentEmail = 'admin@librarymate.com';
+            
+            function log(message) {
+                const logDiv = document.getElementById('log');
+                logDiv.textContent += new Date().toLocaleTimeString() + ' - ' + message + '\n';
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+            
+            async function testLogin() {
+                log('🔄 Testing login API...');
+                try {
+                    const response = await fetch('http://localhost:4000/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: currentEmail,
+                            password: 'LibraryMate@123',
+                            role: 'admin'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    log('✅ Login API response: ' + JSON.stringify(data, null, 2));
+                    
+                    if (data.success && data.requiresOTP) {
+                        log('📧 OTP required. Use demo OTP: 0000');
+                    }
+                } catch (error) {
+                    log('❌ Login API error: ' + error.message);
+                }
+            }
+            
+            async function testOTPVerification() {
+                const otp = document.getElementById('otpInput').value;
+                log('🔄 Testing OTP verification with code: ' + otp);
+                
+                try {
+                    const response = await fetch('http://localhost:4000/api/auth/complete-login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: currentEmail,
+                            code: otp,
+                            role: 'admin'
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    log('✅ OTP verification response: ' + JSON.stringify(data, null, 2));
+                    
+                    if (data.success) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        localStorage.setItem('token', data.data.token);
+                        log('💾 User data saved to localStorage');
+                    }
+                } catch (error) {
+                    log('❌ OTP verification error: ' + error.message);
+                }
+            }
+            
+            async function testDashboard() {
+                log('🔄 Testing dashboard access...');
+                try {
+                    const user = localStorage.getItem('user');
+                    const token = localStorage.getItem('token');
+                    
+                    if (!user || !token) {
+                        log('❌ No user data found. Please complete OTP verification first.');
+                        return;
+                    }
+                    
+                    log('📍 Opening dashboard page...');
+                    window.open('http://localhost:5173/owner/dashboard', '_blank');
+                    
+                } catch (error) {
+                    log('❌ Dashboard test error: ' + error.message);
+                }
+            }
+            
+            function checkAuthState() {
+                log('🔄 Checking authentication state...');
+                
+                const user = localStorage.getItem('user');
+                const token = localStorage.getItem('token');
+                
+                log('👤 User data: ' + (user ? user : 'null'));
+                log('🔑 Token: ' + (token ? token.substring(0, 50) + '...' : 'null'));
+                
+                if (user) {
+                    try {
+                        const userData = JSON.parse(user);
+                        log('✅ User role: ' + userData.role);
+                        log('✅ User ID: ' + userData.id);
+                    } catch (e) {
+                        log('❌ Invalid user data format');
+                    }
+                }
+            }
+        </script>
+    </div>
+</body>
+</html>

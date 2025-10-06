@@ -1,0 +1,17 @@
+# Nginx logs
+access.log
+error.log
+*.log
+
+# SSL certificates (if any)
+*.crt
+*.key
+*.pem
+
+# Temporary files
+tmp/
+temp/
+
+# Backup files
+*.bak
+*.backup

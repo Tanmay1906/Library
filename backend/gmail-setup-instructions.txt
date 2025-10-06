@@ -1,0 +1,19 @@
+# Instructions for setting up real email sending with Gmail
+
+# 1. Go to your Google Account (https://myaccount.google.com/)
+# 2. Navigate to Security > 2-Step Verification (enable if not enabled)
+# 3. Generate an App Password:
+#    - Go to Security > App passwords
+#    - Select "Mail" and your device
+#    - Copy the 16-character password
+
+# 4. Update these lines in your .env file:
+EMAIL_SERVICE=gmail
+EMAIL_USER=your-actual-email@gmail.com
+EMAIL_PASSWORD=your-16-character-app-password
+
+# Example:
+# EMAIL_USER=john.doe@gmail.com
+# EMAIL_PASSWORD=abcd efgh ijkl mnop
+
+# 5. Restart your backend server after making changes

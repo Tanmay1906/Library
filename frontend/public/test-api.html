@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>LibraryMate API Test</h1>
+    <button onclick="testAPI()">Test Books API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="result">Testing API...</div>';
+            
+            try {
+                console.log('🔄 Fetching books from API...');
+                const response = await fetch('http://localhost:4000/api/books');
+                console.log('📡 Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('📚 API Response:', data);
+                
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ API Test Successful!</h3>
+                        <p><strong>Success:</strong> ${data.success}</p>
+                        <p><strong>Books Count:</strong> ${data.data ? data.data.length : 'N/A'}</p>
+                        <p><strong>First Book:</strong> ${data.data && data.data[0] ? data.data[0].title : 'N/A'}</p>
+                        <details>
+                            <summary>Full Response</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Error fetching books:', error);
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3>❌ API Test Failed!</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
