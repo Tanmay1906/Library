@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { API_CONFIG } from '../config/api';
 
 interface User {
   id: string;
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string, role: 'owner' | 'student' = 'student'): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +120,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('📤 Request body:', requestBody);
       
-      const response = await fetch('http://localhost:4000/api/auth/complete-login', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/complete-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const loginWithOTP = async (email: string, role: 'owner' | 'student' = 'student'): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login-with-otp', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login-with-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -234,7 +235,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         delete backendUserData.libraryId;
       }
 
-      const response = await fetch('http://localhost:4000/api/auth/signup', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -286,7 +287,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const activateStudent = async (activationData: any): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:4000/api/auth/activate-student', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/activate-student`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

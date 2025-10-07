@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, BookOpen, Eye, EyeOff, Sparkles, Users, BarChart3, User, Building, ArrowLeft, Shield, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
+import { API_CONFIG } from '../config/api';
 
 /**
  * OTP-based Login Component
@@ -26,7 +27,7 @@ const OTPLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login-with-otp', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login-with-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
