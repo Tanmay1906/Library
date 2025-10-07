@@ -6,9 +6,22 @@ const { PrismaClient } = require('@prisma/client');
 const routes = require('./routes');
 const swaggerDocument = require('./docs/swagger.json');
 const { globalErrorHandler, AppError } = require('./middlewares/errorHandler');
+const { exec } = require('child_process');
 
 const app = express();
 const prisma = new PrismaClient();
+
+// Auto-run database migrations in production
+if (process.env.NODE_ENV === 'production') {
+  console.log('🔄 Running database migrations...');
+  exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+    if (error) {
+      console.error('❌ Migration failed:', error);
+    } else {
+      console.log('✅ Database migrations completed:', stdout);
+    }
+  });
+}
 
 // Trust proxy if behind a proxy (for production)
 app.set('trust proxy', 1);
