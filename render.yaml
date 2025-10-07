@@ -1,0 +1,16 @@
+# Render deployment configuration
+version: 1
+services:
+  - type: web
+    name: librarymate-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: librarymate_super_secure_jwt_secret_key_for_production_2025_at_least_32_characters
+      - key: PORT
+        value: 10000
