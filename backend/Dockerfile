@@ -22,9 +22,9 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Create non-root user (Debian syntax)
+RUN groupadd --gid 1001 nodejs
+RUN useradd --uid 1001 --gid nodejs --shell /bin/bash --create-home nodejs
 
 # Create uploads directory and set permissions
 RUN mkdir -p uploads && chown -R nodejs:nodejs uploads
