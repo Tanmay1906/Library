@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "seed": "node src/seed/admin.js",
     "migrate": "node migrate.js",
-    "setup": "npx prisma migrate deploy && npm run seed"
+    "setup": "npx prisma migrate deploy && npm run seed",
+    "diagnose": "node diagnose.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
