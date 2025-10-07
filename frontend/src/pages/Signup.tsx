@@ -45,7 +45,8 @@ const Signup: React.FC = () => {
 
   const fetchLibraries = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/library');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+      const response = await fetch(`${API_BASE_URL}/library`);
       if (response.ok) {
         const data = await response.json();
         setLibraries(data.data || []);
