@@ -11,6 +11,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
-        value: librarymate_super_secure_jwt_secret_key_for_production_2025_at_least_32_characters
+        value: e548f57f6449ac6a4ed330570dc6086687ec7de09ecc03d7600ff31a56aada77
       - key: PORT
         value: 10000

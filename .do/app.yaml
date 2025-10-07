@@ -1,0 +1,24 @@
+name: librarymate-backend
+services:
+- name: backend
+  source_dir: /backend
+  dockerfile_path: backend/Dockerfile
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: DATABASE_URL
+    value: ${librarymate-db.DATABASE_URL}
+  - key: JWT_SECRET
+    value: librarymate_super_secure_jwt_secret_key_for_production_2025_at_least_32_characters
+  - key: FRONTEND_URL
+    value: https://YOUR_VERCEL_DOMAIN.vercel.app
+  http_port: 4000
+  routes:
+  - path: /
+databases:
+- name: librarymate-db
+  engine: PG
+  version: "13"
+  size: basic

@@ -1,5 +1,8 @@
 # Use the official Node.js 18 Alpine image
-FROM node:18-alpine AS build
+FROM node:18-alpine
+
+# Install necessary packages for bcrypt
+RUN apk add --no-cache libc6-compat
 
 # Set working directory
 WORKDIR /app
