@@ -7,6 +7,7 @@ import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
 import BookCover from '../../components/UI/BookCover';
 import { useAuth } from '../../utils/AuthContext';
+import { API_CONFIG } from '../../config/api';
 
 // Book interface for API data 
 interface Book {
@@ -59,7 +60,7 @@ const Books: React.FC = () => {
   React.useEffect(() => {
     setLoading(true);
     console.log('🔄 Fetching books from API...');
-    fetch('http://localhost:4000/api/books')
+    fetch(`${API_CONFIG.BASE_URL}/books`)
       .then(res => res.json())
       .then(response => {
         console.log('📚 API Response:', response);

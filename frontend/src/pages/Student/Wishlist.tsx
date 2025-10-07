@@ -1,11 +1,13 @@
 import React from 'react';
 import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
+import { API_CONFIG } from '../../config/api';
+
 const Wishlist: React.FC = () => {
   const [books, setBooks] = React.useState<any[]>([]);
   const wishlistedBooks = React.useMemo(() => books.filter(book => book.isWishlisted), [books]);
   React.useEffect(() => {
-    fetch('http://localhost:4000/api/books')
+    fetch(`${API_CONFIG.BASE_URL}/books`)
       .then(res => res.json())
       .then(data => setBooks(data))
       .catch(() => setBooks([]));
