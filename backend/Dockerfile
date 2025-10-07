@@ -1,8 +1,11 @@
-# Use the official Node.js 18 Alpine image
-FROM node:18-alpine
+# Use the official Node.js 18 image (Debian-based for better Prisma compatibility)
+FROM node:18-slim
 
-# Install necessary packages for bcrypt
-RUN apk add --no-cache libc6-compat
+# Install necessary packages for Prisma and bcrypt
+RUN apt-get update -y && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
