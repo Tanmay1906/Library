@@ -44,6 +44,19 @@ class ConflictError extends AppError {
 
 // Handle Prisma errors
 const handlePrismaError = (error) => {
+  // Log full Prisma error server-side for debugging (will not be sent to clients in production)
+  try {
+    console.error('Prisma error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+      stack: error.stack
+    });
+  } catch (logErr) {
+    // If logging fails, at least print the original error
+    console.error('Failed to serialize Prisma error for logging', logErr);
+    console.error(error);
+  }
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002':
@@ -64,6 +77,7 @@ const handlePrismaError = (error) => {
         return new ValidationError('Required relation is missing');
       
       default:
+        // For unknown Prisma errors, log the code and return a generic message
         return new AppError('Database operation failed', 500);
     }
   }
