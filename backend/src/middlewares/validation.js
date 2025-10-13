@@ -24,7 +24,7 @@ exports.validateLogin = (req, res, next) => {
     })
   });
   
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     return res.status(400).json({ 
       error: 'Validation error', 
@@ -81,7 +81,7 @@ exports.validateSignup = (req, res, next) => {
     })
   });
   
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     console.log('Signup validation error details:', error.details);
     console.log('Failed field:', error.details[0].path);
@@ -108,7 +108,7 @@ exports.validateOTP = (req, res, next) => {
     })
   });
   
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     return res.status(400).json({ 
       error: 'Validation error', 
@@ -150,7 +150,7 @@ exports.validateStudent = (req, res, next) => {
     paymentStatus: Joi.string().valid('PENDING', 'PAID', 'OVERDUE', 'CANCELLED').default('PENDING')
   });
   
-  const { error } = schema.validate(req.body);
+  const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     return res.status(400).json({ 
       error: 'Validation error', 
@@ -163,7 +163,7 @@ exports.validateStudent = (req, res, next) => {
 // Generic validation middleware factory
 const validate = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body, { abortEarly: false });
+    const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
     
     if (error) {
       const errorMessages = error.details.map(detail => detail.message);

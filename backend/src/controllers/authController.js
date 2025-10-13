@@ -325,13 +325,23 @@ exports.completeLogin = catchAsync(async (req, res) => {
 });
 
 exports.signup = catchAsync(async (req, res) => {
-    console.log('Signup request received - req.body:', JSON.stringify(req.body, null, 2));
-    const { name, email, phone, password, role, registrationNumber, aadharReference, libraryId } = req.body;
+    console.log('Signup request received - req.body keys:', Object.keys(req.body));
+    // Whitelist only the fields we accept from the client
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role,
+      registrationNumber,
+      aadharReference,
+      libraryId
+    } = req.body;
     console.log('Extracted fields:', { name, email, phone, role, registrationNumber, aadharReference, libraryId });
     const hashed = await bcrypt.hash(password, 10);
     console.log('Password hashed successfully');
     
-    if (role === 'admin') {
+  if (role === 'admin') {
       console.log('Creating admin account...');
       
       // Check if email already exists
@@ -383,7 +393,7 @@ exports.signup = catchAsync(async (req, res) => {
         user: userData,
         message: 'Admin registered successfully!' 
       });
-    } else if (role === 'student') {
+  } else if (role === 'student') {
       console.log('Creating student account...');
       
       // Check if email already exists
@@ -436,19 +446,21 @@ exports.signup = catchAsync(async (req, res) => {
         }
       }
       
+      const studentData = {
+        name,
+        email,
+        phone,
+        password: hashed,
+        registrationNumber,
+        aadharReference,
+        subscriptionPlan: 'MONTHLY',
+        libraryId: libraryId || null,
+        paymentStatus: 'PENDING',
+        dueDate: null
+      };
+
       const student = await prisma.student.create({
-        data: { 
-          name, 
-          email, 
-          phone, 
-          password: hashed, 
-          registrationNumber, 
-          aadharReference, 
-          subscriptionPlan: 'MONTHLY',
-          libraryId: libraryId || null,
-          paymentStatus: 'PENDING',
-          dueDate: null
-        },
+        data: studentData,
         include: {
           library: true
         }
@@ -646,7 +658,17 @@ exports.verify = catchAsync(async (req, res) => {
 
 // Complete signup after OTP verification
 exports.completeSignup = catchAsync(async (req, res) => {
-    const { name, email, phone, password, role, registrationNumber, aadharReference, libraryId } = req.body;
+    // Whitelist fields from request body
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role,
+      registrationNumber,
+      aadharReference,
+      libraryId
+    } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     
     let newUser;

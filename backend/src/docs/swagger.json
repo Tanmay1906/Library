@@ -7,7 +7,7 @@
   "paths": {
     "/api/auth/login": {
       "post": {
-        "summary": "Login",
+        "summary": "Login bro",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Login" } } } },
         "responses": { "200": { "description": "JWT token" } }
       }

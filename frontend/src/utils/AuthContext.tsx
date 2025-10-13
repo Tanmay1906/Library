@@ -219,20 +219,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signup = async (userData: any): Promise<boolean> => {
     try {
-      // Convert frontend role to backend role and remove fields the backend doesn't expect
+      // Build a minimal backend payload and only include fields allowed per role
       const { confirmPassword, libraryName, libraryDescription, ...cleanUserData } = userData;
-      const backendUserData = {
-        ...cleanUserData,
-        role: userData.role === 'owner' ? 'admin' : userData.role,
-        // Include libraryId for students if provided and not empty
-        ...(userData.role === 'student' && userData.libraryId && userData.libraryId.trim() !== '' && { 
-          libraryId: userData.libraryId 
-        })
+      const roleForBackend = userData.role === 'owner' ? 'admin' : userData.role;
+
+      // Common fields
+      const backendUserData: any = {
+        name: cleanUserData.name,
+        email: cleanUserData.email,
+        phone: cleanUserData.phone,
+        password: cleanUserData.password,
+        role: roleForBackend
       };
 
-      // Remove libraryId if it's empty or undefined for students
-      if (userData.role === 'student' && (!userData.libraryId || userData.libraryId.trim() === '')) {
-        delete backendUserData.libraryId;
+      // Student-specific fields
+      if (userData.role === 'student') {
+        if (cleanUserData.registrationNumber) backendUserData.registrationNumber = cleanUserData.registrationNumber;
+        if (cleanUserData.aadharReference) backendUserData.aadharReference = cleanUserData.aadharReference;
+        if (cleanUserData.libraryId && cleanUserData.libraryId.trim() !== '') backendUserData.libraryId = cleanUserData.libraryId;
       }
 
       const response = await fetch(`${API_CONFIG.BASE_URL}/auth/signup`, {

@@ -59,34 +59,27 @@ const Books: React.FC = () => {
   
   React.useEffect(() => {
     setLoading(true);
-    console.log('🔄 Fetching books from API...');
     fetch(`${API_CONFIG.BASE_URL}/books`)
-      .then(res => res.json())
-      .then(response => {
-        console.log('📚 API Response:', response);
-        // Check if response has the expected structure
-        if (response.success && Array.isArray(response.data)) {
-          console.log('✅ Setting books from response.data:', response.data.length, 'books');
-          setBooks(response.data);
-        } else if (Array.isArray(response)) {
-          // Fallback for direct array response
-          console.log('✅ Setting books from direct array:', response.length, 'books');
-          setBooks(response);
-        } else {
-          console.error('❌ API response is not in expected format:', response);
-          setBooks([]);
-        }
-        setError(null);
+      .then(res => {
+        if (!res.ok) throw new Error(`Failed to fetch books: ${res.status}`);
+        return res.json().catch(() => null);
       })
-      .catch(err => {
-        console.error('❌ Error fetching books:', err);
+      .then(response => {
+        // backend returns { success: true, data: books }
+        const booksData = response && (Array.isArray(response.data) ? response.data : Array.isArray(response) ? response : null);
+        if (Array.isArray(booksData)) {
+          setBooks(booksData);
+          setError(null);
+        } else {
+          setBooks([]);
+          setError('No books available');
+        }
+      })
+      .catch(() => {
         setError('Failed to load books');
         setBooks([]);
       })
-      .finally(() => {
-        console.log('🏁 Finished loading books');
-        setLoading(false);
-      });
+      .finally(() => setLoading(false));
   }, []);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,10 +121,7 @@ const Books: React.FC = () => {
       }
     }) : [];
 
-  // Debug logging
-  console.log('📊 Books state:', books.length, 'books');
-  console.log('🔍 Filtered books:', filteredAndSortedBooks.length, 'books');
-  console.log('🔐 Auth state - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+  // (Removed debug logs)
 
   /**
    * Toggle wishlist status
@@ -241,16 +231,7 @@ const Books: React.FC = () => {
           </Card>
         )}
 
-        {/* Debug Info */}
-        <Card className="mb-8 bg-blue-50 border border-blue-200 text-blue-700 p-4 rounded-2xl">
-          <div className="text-sm">
-            <p><strong>Debug Info:</strong></p>
-            <p>Books loaded: {books.length} | Filtered: {filteredAndSortedBooks.length}</p>
-            <p>Auth - isAuthenticated: {isAuthenticated ? 'Yes' : 'No'} | isLoading: {isLoading ? 'Yes' : 'No'}</p>
-            <p>Loading: {loading ? 'Yes' : 'No'} | Error: {error || 'None'}</p>
-            <p>Search: "{searchTerm}" | Category: {categoryFilter} | Sort: {sortBy}</p>
-          </div>
-        </Card>
+        {/* Debug Info removed for production */}
 
         {/* Main Content - Only show when not loading */}
         {!loading && (

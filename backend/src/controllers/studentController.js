@@ -84,6 +84,8 @@ exports.getStudents = catchAsync(async (req, res) => {
 });
 
 exports.createStudent = catchAsync(async (req, res) => {
+  // Whitelist expected fields and log keys for debugging
+  console.log('createStudent request body keys:', Object.keys(req.body));
   const { 
     name, 
     email, 
@@ -230,7 +232,12 @@ exports.createStudent = catchAsync(async (req, res) => {
 
 exports.updateStudent = catchAsync(async (req, res) => {
   const { id } = req.params;
-  const updateData = { ...req.body };
+  // Whitelist allowed update fields to avoid saving unexpected keys
+  const allowedFields = ['name', 'phone', 'password', 'registrationNumber', 'subscriptionPlan', 'paymentStatus', 'dueDate', 'address'];
+  const updateData = {};
+  for (const key of allowedFields) {
+    if (req.body[key] !== undefined) updateData[key] = req.body[key];
+  }
 
   // Hash password if it's being updated
   if (updateData.password) {

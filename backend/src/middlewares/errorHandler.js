@@ -12,6 +12,20 @@ class AppError extends Error {
   }
 }
 
+// Backwards-compatible ApiError wrapper: some controllers call ApiError(statusCode, message)
+class ApiError extends AppError {
+  constructor(a, b) {
+    // Support both (message, statusCode) and (statusCode, message)
+    if (typeof a === 'number') {
+      // called as ApiError(statusCode, message)
+      super(b || 'Error', a || 500);
+    } else {
+      // called as ApiError(message, statusCode)
+      super(a || 'Error', b || 500);
+    }
+  }
+}
+
 class ValidationError extends AppError {
   constructor(message) {
     super(message, 400);
@@ -155,6 +169,8 @@ const catchAsync = (fn) => {
 
 module.exports = {
   AppError,
+  // Backwards-compatible alias: some controllers expect ApiError
+  ApiError,
   ValidationError,
   AuthenticationError,
   AuthorizationError,

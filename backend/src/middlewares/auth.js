@@ -104,8 +104,16 @@ exports.authorize = (roles) => (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
-  
-  if (!roles.includes(req.user.role)) {
+  // Normalize incoming and required roles to uppercase
+  const userRole = String(req.user.role || '').toUpperCase();
+  const normalizedRequired = roles.map(r => String(r).toUpperCase()).flatMap(r => {
+    // Accept LIBRARY_OWNER as equivalent to ADMIN/OWNER
+    if (r === 'ADMIN' || r === 'OWNER') return ['ADMIN', 'OWNER', 'LIBRARY_OWNER'];
+    if (r === 'LIBRARY_OWNER') return ['LIBRARY_OWNER', 'ADMIN', 'OWNER'];
+    return [r];
+  });
+
+  if (!normalizedRequired.includes(userRole)) {
     return res.status(403).json({ 
       error: 'Forbidden', 
       message: `Access denied. Required roles: ${roles.join(', ')}` 

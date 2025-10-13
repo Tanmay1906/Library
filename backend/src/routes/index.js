@@ -20,6 +20,8 @@ const notificationController = require('../controllers/notificationController');
 router.use('/auth', authRoutes);
 router.use('/books', bookRoutes); // Allow public access to books
 router.use('/libraries', libraryRoutes); // Allow public access to libraries (controller handles auth)
+// Support legacy/singular route used by some frontends
+router.use('/library', libraryRoutes);
 router.use('/subscription-plans', subscriptionRoutes); // Allow public access to subscription plans
 
 // Protected routes (authentication required)
