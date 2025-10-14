@@ -29,10 +29,35 @@ if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE === 'true'
 app.set('trust proxy', 1);
 
 // Security middleware
+// Build allowed origins array safely (filter out undefined values)
+const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:4173'];
+const prodOrigins = [process.env.FRONTEND_URL, 'https://your-domain.com', 'https://your-domain.vercel.app'].filter(Boolean);
+const allowedOrigins = process.env.NODE_ENV === 'production' ? (prodOrigins.length ? prodOrigins : ['*']) : devOrigins;
+
+// Early middleware to set CORS headers so even error responses include them
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+  // Continue flow; real CORS handling is below via the cors middleware
+  next();
+});
+
+// CORS middleware with a permissive origin checker using allowedOrigins
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://your-domain.com', 'https://your-domain.vercel.app']
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:4173'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like server-to-server or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes('*')) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -40,15 +65,10 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
-// Handle preflight requests explicitly
-app.options('*', cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, 'https://your-domain.com', 'https://your-domain.vercel.app']
-    : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:4173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
-}));
+// Handle preflight requests explicitly using same origin rules
+app.options('*', (req, res) => {
+  res.sendStatus(200);
+});
 
 // Body parser middleware with size limits
 app.use(express.json({ limit: '10mb' }));
