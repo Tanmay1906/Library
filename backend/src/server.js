@@ -11,16 +11,18 @@ const { exec } = require('child_process');
 const app = express();
 const prisma = new PrismaClient();
 
-// Auto-run database migrations in production
-if (process.env.NODE_ENV === 'production') {
-  console.log('🔄 Running database migrations...');
-  exec('npx prisma migrate deploy', (error, stdout, stderr) => {
+// Auto-run database migrations in production only when AUTO_MIGRATE=true
+if (process.env.NODE_ENV === 'production' && process.env.AUTO_MIGRATE === 'true') {
+  console.log('🔄 Running database migrations (AUTO_MIGRATE=true)...');
+  exec('npx prisma migrate deploy', { env: process.env }, (error, stdout, stderr) => {
     if (error) {
       console.error('❌ Migration failed:', error);
     } else {
       console.log('✅ Database migrations completed:', stdout);
     }
   });
+} else if (process.env.NODE_ENV === 'production') {
+  console.log('ℹ️ AUTO_MIGRATE not enabled; skipping prisma migrate deploy on startup.');
 }
 
 // Trust proxy if behind a proxy (for production)
