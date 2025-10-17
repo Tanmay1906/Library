@@ -4,6 +4,10 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const { PrismaClient } = require('@prisma/client');
 const routes = require('./routes');
+const bookController = require('./controllers/bookController');
+const libraryController = require('./controllers/libraryController');
+const subscriptionController = require('./controllers/subscriptionController');
+const notificationController = require('./controllers/notificationController');
 const swaggerDocument = require('./docs/swagger.json');
 const { globalErrorHandler, AppError } = require('./middlewares/errorHandler');
 const { exec } = require('child_process');
@@ -31,15 +35,52 @@ app.set('trust proxy', 1);
 // Security middleware
 // Build allowed origins array safely (filter out undefined values)
 const devOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:4173'];
-const prodOrigins = [process.env.FRONTEND_URL, 'https://your-domain.com', 'https://your-domain.vercel.app'].filter(Boolean);
+
+// Allow configuring multiple explicit origins via CORS_ALLOWED_ORIGINS (comma-separated)
+const extraOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+// Allow configuring suffix-based matching (e.g., ".vercel.app") via CORS_ALLOWED_SUFFIXES (comma-separated)
+const allowedSuffixes = (process.env.CORS_ALLOWED_SUFFIXES || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// Provide sensible production defaults; include FRONTEND_URL if set
+const prodOrigins = [
+  ...extraOrigins,
+  process.env.FRONTEND_URL,
+  // Add known deployment default for safety; change/remove if undesired
+  'https://library-production.vercel.app'
+].filter(Boolean);
+
 const allowedOrigins = process.env.NODE_ENV === 'production' ? (prodOrigins.length ? prodOrigins : ['*']) : devOrigins;
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // allow server-to-server
+  if (allowedOrigins.includes('*')) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  if (allowedSuffixes.length > 0) {
+    try {
+      const url = new URL(origin);
+      const host = url.host;
+      return allowedSuffixes.some(suffix => host.endsWith(suffix.replace(/^\./, '')));
+    } catch (_) {
+      // Fallback to string check if origin isn't a valid URL
+      return allowedSuffixes.some(suffix => origin.endsWith(suffix));
+    }
+  }
+  return false;
+};
 
 // Early middleware to set CORS headers so even error responses include them
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (allowedOrigins.includes('*')) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-  } else if (origin && allowedOrigins.includes(origin)) {
+  } else if (origin && isOriginAllowed(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -54,8 +95,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like server-to-server or curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes('*')) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isOriginAllowed(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -91,6 +131,14 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV
   });
 });
+
+// Critical explicit aliases to avoid 404s behind some proxies/builds
+// Ensure key public endpoints are always reachable
+app.get('/api', (req, res) => res.json({ ok: true }));
+app.get('/api/books', bookController.getBooks);
+app.get('/api/libraries', libraryController.getLibraries);
+app.get('/api/subscription-plans', subscriptionController.getSubscriptionPlans);
+app.get('/api/notification-templates', notificationController.getNotificationTemplates);
 
 // API routes
 app.use('/api', routes);
