@@ -220,7 +220,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signup = async (userData: any): Promise<boolean> => {
     try {
       // Build a minimal backend payload and only include fields allowed per role
-      const { confirmPassword, libraryName, libraryDescription, ...cleanUserData } = userData;
+      const { confirmPassword, libraryName, libraryAddress, libraryDescription, ...cleanUserData } = userData;
       const roleForBackend = userData.role === 'owner' ? 'admin' : userData.role;
 
       // Common fields
@@ -231,6 +231,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password: cleanUserData.password,
         role: roleForBackend
       };
+
+      // Owner-specific fields (for auto library creation)
+      if (userData.role === 'owner') {
+        if (libraryName) backendUserData.libraryName = libraryName;
+        if (libraryAddress) backendUserData.libraryAddress = libraryAddress;
+        if (libraryDescription) backendUserData.libraryDescription = libraryDescription;
+      }
 
       // Student-specific fields
       if (userData.role === 'student') {
@@ -256,7 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               id: data.user.id,
               name: data.user.name,
               email: data.user.email,
-              role: data.user.role === 'admin' ? 'owner' : data.user.role,
+              role: (data.user.role === 'LIBRARY_OWNER' || data.user.role === 'admin' || data.user.role === 'owner') ? 'owner' : 'student',
               libraryId: data.user.libraryId,
               phone: data.user.phone,
               registrationNumber: data.user.registrationNumber,

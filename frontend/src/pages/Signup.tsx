@@ -122,14 +122,8 @@ const Signup: React.FC = () => {
     try {
       const success = await signup(formData);
       if (success) {
-        setTimeout(() => {
-          if (isAuthenticated) {
-            const dashboardPath = formData.role === 'owner' ? '/owner/dashboard' : '/student/dashboard';
-            navigate(dashboardPath);
-          } else {
-            navigate('/login');
-          }
-        }, 100);
+        const dashboardPath = formData.role === 'owner' ? '/owner/dashboard' : '/student/dashboard';
+        setTimeout(() => navigate(dashboardPath), 100);
       } else {
         setError('Registration failed. Please try again.');
       }
