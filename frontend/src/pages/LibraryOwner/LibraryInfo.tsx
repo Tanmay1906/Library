@@ -7,6 +7,7 @@ import Button from '../../components/UI/Button';
 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
+import { api } from '../../utils/api';
 /** Library data type */
 interface LibraryData {
   name?: string;
@@ -42,9 +43,11 @@ const LibraryInfo: React.FC = () => {
       });
     } else {
       // fallback to API fetch if not logged in as owner
-      fetch('http://localhost:4000/api/libraries')
-        .then(res => res.json())
-        .then(data => setLibrary(data[0] || null))
+      api.get('/libraries')
+        .then((data: any) => {
+          const list = Array.isArray(data) ? data : (data?.data ?? []);
+          setLibrary(list[0] || null);
+        })
         .catch(() => setLibrary(null));
     }
   }, [user]);

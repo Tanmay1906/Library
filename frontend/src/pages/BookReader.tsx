@@ -15,6 +15,7 @@ import {
 import Navbar from '../components/Layout/Navbar';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import { api } from '../utils/api';
 
 // Book interface for API data
 interface Book {
@@ -48,12 +49,12 @@ const BookReader: React.FC = () => {
   // Fetch book data on component mount
   React.useEffect(() => {
     if (bookId) {
-      fetch(`http://localhost:4000/api/books/${bookId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setBook(data.data);
-            setReadingProgress(data.data.readingProgress || 0);
+      api.get(`/books/${bookId}`)
+        .then((data: any) => {
+          const bookData = data?.data || data;
+          if (bookData) {
+            setBook(bookData);
+            setReadingProgress(bookData.readingProgress || 0);
           }
         })
         .catch(err => {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, BookOpen, Eye, EyeOff, Sparkles, Users, BarChart3, User, Building, ArrowLeft, Shield, Clock, CheckCircle } from 'lucide-react';
+import { Mail, BookOpen, Sparkles, User, Building, ArrowLeft, Shield, Clock, CheckCircle } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
 import { API_CONFIG } from '../config/api';
 
@@ -18,7 +18,7 @@ const OTPLogin: React.FC = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [previewURL, setPreviewURL] = useState<string | null>(null);
   
-  const { loginWithOTP } = useAuth();
+  const {  } = useAuth();
   const navigate = useNavigate();
 
   const handleSendOTP = async (e: React.FormEvent) => {
@@ -63,7 +63,7 @@ const OTPLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/auth/complete-login-otp', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/complete-login-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ const OTPLogin: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login-with-otp', {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/auth/login-with-otp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

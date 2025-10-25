@@ -4,15 +4,15 @@ import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
+import { api } from '../../utils/api';
 /**
  * Edit Student Page Component
  * Allows library owners to edit student details and subscription
  */
 const EditStudent: React.FC = () => {
   React.useEffect(() => {
-    fetch('http://localhost:4000/api/subscription-plans')
-      .then(res => res.json())
-      .then(data => console.log('Plans loaded:', data))
+    api.get('/subscription-plans')
+      .then((data) => console.log('Plans loaded:', data))
       .catch(() => console.log('Failed to load plans'));
   }, []);
   const navigate = useNavigate();

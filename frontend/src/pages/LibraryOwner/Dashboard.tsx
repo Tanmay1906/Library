@@ -4,6 +4,7 @@ import { Users, BookOpen, CreditCard, TrendingUp, Calendar, AlertCircle } from '
 import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import { useAuth } from '../../utils/AuthContext';
+import { api } from '../../utils/api';
 
 
 /**
@@ -26,52 +27,16 @@ const LibraryOwnerDashboard: React.FC = () => {
   const [, setLoading] = React.useState(true);
   
   React.useEffect(() => {
-    // Get auth token from localStorage
-    const user = localStorage.getItem('user');
-    const authHeaders: HeadersInit = {};
-    
-    if (user) {
-      try {
-        const userData = JSON.parse(user);
-        const token = userData?.token || localStorage.getItem('token');
-        if (token) {
-          authHeaders['Authorization'] = `Bearer ${token}`;
-        }
-      } catch (e) {
-        console.warn('Could not parse user data from localStorage');
-      }
-    }
-
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch students
-        const studentsResponse = await fetch('http://localhost:4000/api/students', {
-          headers: authHeaders
-        });
-        
-        if (studentsResponse.ok) {
-          const studentsData = await studentsResponse.json();
-          console.log('Students API response:', studentsData);
-          setStudents(Array.isArray(studentsData.data) ? studentsData.data : []);
-        } else {
-          console.warn('Students API failed');
-          setStudents([]);
-        }
+        const studentsData: any = await api.get('/students');
+        const studentsList = Array.isArray(studentsData) ? studentsData : (studentsData?.data ?? []);
+        setStudents(studentsList);
 
-        // Fetch libraries
-        const librariesResponse = await fetch('http://localhost:4000/api/libraries', {
-          headers: authHeaders
-        });
-        
-        if (librariesResponse.ok) {
-          const librariesData = await librariesResponse.json();
-          console.log('Libraries API response:', librariesData);
-          setLibrary(Array.isArray(librariesData.data) ? librariesData.data[0] || null : null);
-        } else {
-          console.warn('Libraries API failed');
-          setLibrary(null);
-        }
+        const librariesData: any = await api.get('/libraries');
+        const libs = Array.isArray(librariesData) ? librariesData : (librariesData?.data ?? []);
+        setLibrary(libs[0] || null);
       } catch (error) {
         console.error('Error fetching data:', error);
         setStudents([]);

@@ -6,6 +6,7 @@ import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
 import { useAuth } from '../../utils/AuthContext';
+import { api } from '../../utils/api';
 /**
  * Library Owner Profile Page Component
  * Allows library owners to view and edit their profile information
@@ -49,40 +50,8 @@ const LibraryOwnerProfile: React.FC = () => {
     const fetchProfileData = async () => {
       try {
         setAccountLoading(true);
-        
-        // Get token from localStorage - try both locations
-        let token = localStorage.getItem('token');
-        if (!token) {
-          // Fallback to getting token from user object
-          const userStr = localStorage.getItem('user');
-          if (userStr) {
-            const userData = JSON.parse(userStr);
-            token = userData.token;
-          }
-        }
-        
-        if (!token) {
-          console.error('No authentication token found');
-          console.log('Checking localStorage for user data...');
-          const userStr = localStorage.getItem('user');
-          console.log('User data in localStorage:', userStr);
-          setError('Authentication required. Please log in again.');
-          setAccountLoading(false);
-          return;
-        }
-        
-        console.log('Using token:', token?.substring(0, 20) + '...');
-        
-        const response = await fetch('http://localhost:4000/api/admin/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          const data = result.data;
+        const result: any = await api.get('/admin/profile');
+        const data = result?.data || result;
           
           const newProfileData = {
             name: data.name || '',
@@ -116,13 +85,6 @@ const LibraryOwnerProfile: React.FC = () => {
             lastLogin,
             status: 'Active'
           });
-        } else {
-          console.error('Failed to fetch profile data');
-          console.log('Response status:', response.status);
-          console.log('Response statusText:', response.statusText);
-          const errorText = await response.text();
-          console.log('Response body:', errorText);
-        }
       } catch (error) {
         console.error('Error fetching profile data:', error);
       } finally {
@@ -163,35 +125,8 @@ const LibraryOwnerProfile: React.FC = () => {
     setError('');
     
     try {
-      // Get token from localStorage - try both locations
-      let token = localStorage.getItem('token');
-      if (!token) {
-        // Fallback to getting token from user object
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          token = userData.token;
-        }
-      }
-      
-      if (!token) {
-        setError('Authentication required. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      
-      const response = await fetch('http://localhost:4000/api/admin/profile', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(profileData)
-      });
-
-      const result = await response.json();
-      
-      if (response.ok) {
+      const result: any = await api.put('/admin/profile', profileData);
+      if (result) {
         setIsEditing(false);
         setSuccess('Profile updated successfully!');
         setTimeout(() => setSuccess(''), 3000);
@@ -209,7 +144,7 @@ const LibraryOwnerProfile: React.FC = () => {
           setOriginalProfileData(newProfileData); // Update original data too
         }
       } else {
-        setError(result.error || 'Failed to update profile. Please try again.');
+        setError(result?.error || 'Failed to update profile. Please try again.');
       }
     } catch (err) {
       setError('Failed to update profile. Please try again.');
