@@ -3,6 +3,7 @@ import Navbar from '../../components/Layout/Navbar';
 import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
+import { api } from '../../utils/api';
 /**
  * Add Student Page Component
  * Allows library owners to register new students with subscription plans
@@ -28,9 +29,8 @@ const AddStudent: React.FC = () => {
   };
   const [plans, setPlans] = useState<any>({});
   React.useEffect(() => {
-    fetch('http://localhost:4000/api/subscription-plans')
-      .then(res => res.json())
-      .then(data => setPlans(data))
+    api.get('/subscription-plans')
+      .then((data) => setPlans(data))
       .catch(() => setPlans({}));
   }, []);
 
@@ -39,18 +39,8 @@ const AddStudent: React.FC = () => {
     const syncRegistrationNumbers = async () => {
       try {
         console.log('🔄 Syncing registration numbers with backend...');
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.warn('⚠️ No token found, skipping sync');
-          return;
-        }
-
-        const response = await fetch('http://localhost:4000/api/students', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
+        const data = await api.get('/students');
+        if (data) {
           console.log('📊 Fetched students data:', data);
           
           const existingRegNumbers = data.data?.map((student: any) => {
@@ -80,8 +70,6 @@ const AddStudent: React.FC = () => {
             registrationNumber: nextRegNumber
           }));
           console.log('✅ Form updated with registration number:', nextRegNumber);
-        } else {
-          console.error('❌ Failed to fetch students:', response.status, response.statusText);
         }
       } catch (error) {
         console.warn('⚠️ Could not sync registration numbers:', error);
@@ -198,20 +186,6 @@ const AddStudent: React.FC = () => {
     setError('');
 
     try {
-      // Get auth token from localStorage
-      const user = localStorage.getItem('user');
-      const userData = user ? JSON.parse(user) : null;
-      let token = userData?.token;
-
-      if (!token) {
-        // Try to get token from separate storage
-        const separateToken = localStorage.getItem('token');
-        if (!separateToken) {
-          throw new Error('No authentication token found. Please log in first.');
-        }
-        token = separateToken;
-      }
-
       // Prepare student data for API
       // Generate a unique registration number as final safety check
       const currentTime = Date.now();
@@ -232,23 +206,7 @@ const AddStudent: React.FC = () => {
       };
 
       console.log('🚀 Sending student data to API:', studentData);
-
-      // Make API call to create student
-      const response = await fetch('http://localhost:4000/api/students', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(studentData)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to create student: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await api.post('/students', studentData);
       console.log('Student created successfully:', result);
 
       // Mark this registration number as assigned
@@ -278,7 +236,7 @@ const AddStudent: React.FC = () => {
 
       // Notify other components that a student was added
       // Dispatch custom event
-      window.dispatchEvent(new CustomEvent('studentAdded', { detail: result.data }));
+      window.dispatchEvent(new CustomEvent('studentAdded', { detail: result }));
       
       // Also set localStorage flag as fallback for cross-tab communication
       localStorage.setItem('studentAdded', Date.now().toString());

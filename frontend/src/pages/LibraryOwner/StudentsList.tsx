@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, MoreVertical, Mail, Phone, Calendar, CreditCard, User, BookOpen, Clock, CheckCircle, AlertCircle, XCircle, Edit3, Save, X, Users } from 'lucide-react';
 import Navbar from '../../components/Layout/Navbar';
+import { api } from '../../utils/api';
 // Button Component
 type ButtonVariant = 'primary' | 'secondary' | 'success' | 'outline' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -369,26 +370,21 @@ const StudentsList = () => {
   // Quick dev login function for testing
   const performQuickLogin = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: 'admin@librarymate.com',
-          password: 'LibraryMate@123',
-          role: 'admin'
-        })
+      const data: any = await api.post('/auth/login', {
+        email: 'admin@librarymate.com',
+        password: 'LibraryMate@123',
+        role: 'admin',
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        localStorage.setItem('token', data.data.token);
+      const user = data?.user || data?.data?.user;
+      const token = data?.token || data?.data?.token;
+      if (user && token) {
+        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('token', token);
         console.log('Quick login successful');
         fetchStudents();
       } else {
-        console.error('Quick login failed');
+        console.error('Quick login failed: unexpected response format');
       }
     } catch (error) {
       console.error('Quick login error:', error);
@@ -400,47 +396,9 @@ const StudentsList = () => {
     try {
       setIsLoading(true);
       setError('');
-      
-      // Get auth token from localStorage
-      const user = localStorage.getItem('user');
-      const userData = user ? JSON.parse(user) : null;
-      let token = userData?.token || localStorage.getItem('token');
-      
-      if (!token) {
-        setError('Please log in to view students. You need to be authenticated to access this page.');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch('http://localhost:4000/api/students', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid or expired
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-          setError('Your session has expired. Please log in again.');
-          setIsLoading(false);
-          return;
-        }
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      // Handle API response format
-      if (data.success && Array.isArray(data.data)) {
-        setStudents(data.data);
-      } else if (Array.isArray(data)) {
-        setStudents(data);
-      } else {
-        throw new Error('Invalid response format from API');
-      }
+      const data: any = await api.get('/students');
+      const list = Array.isArray(data) ? data : (data?.data ?? []);
+      setStudents(list);
     } catch (err) {
       console.error('Error fetching students:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch students');

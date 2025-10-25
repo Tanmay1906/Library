@@ -5,6 +5,7 @@ import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
 import Modal from '../../components/UI/Modal';
+import { api } from '../../utils/api';
 
 /**
  * Notifications Page Component
@@ -38,21 +39,9 @@ const Notifications: React.FC = () => {
     const fetchNotifications = async () => {
       try {
         setError(null);
-        
-        const response = await fetch('http://localhost:4000/api/notifications', {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setNotificationHistory(data.data || []);
-        }
+        const data: any = await api.get('/notifications');
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setNotificationHistory(list);
       } catch (error) {
         console.error('Error fetching notifications:', error);
         setError('Failed to fetch notifications. Please check if backend is running.');
@@ -68,21 +57,8 @@ const Notifications: React.FC = () => {
   React.useEffect(() => {
     const fetchStatistics = async () => {
       try {
-        const response = await fetch('http://localhost:4000/api/notifications/stats', {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          console.error('Failed to fetch notification statistics');
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setStatistics(data.data);
-        }
+        const data: any = await api.get('/notifications/stats');
+        setStatistics(data?.data || data || { sentThisMonth: 0, openRate: '0%', responseRate: '0%' });
       } catch (error) {
         console.error('Error fetching notification statistics:', error);
       }
@@ -95,21 +71,9 @@ const Notifications: React.FC = () => {
   React.useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const response = await fetch('http://localhost:4000/api/notification-templates', {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          console.error('Failed to fetch notification templates');
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setTemplates(data.data || []);
-        }
+        const data: any = await api.get('/notification-templates');
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setTemplates(list);
       } catch (error) {
         console.error('Error fetching templates:', error);
       }
@@ -144,21 +108,9 @@ const Notifications: React.FC = () => {
    */
   const handleDeleteNotification = async (notificationId: string) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete notification');
-      }
-      
-      const data = await response.json();
-      if (data.success) {
-        // Remove from local state
-        setNotificationHistory(prev => prev.filter(notification => notification.id !== notificationId));
-        console.log('Notification deleted successfully');
-      }
+      await api.delete(`/notifications/${notificationId}`);
+      setNotificationHistory(prev => prev.filter(notification => notification.id !== notificationId));
+      console.log('Notification deleted successfully');
     } catch (error) {
       console.error('Error deleting notification:', error);
       setError('Failed to delete notification. Please try again.');
@@ -174,34 +126,13 @@ const Notifications: React.FC = () => {
     
     try {
       // Fetch notifications
-      const notificationsResponse = await fetch('http://localhost:4000/api/notifications', {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (notificationsResponse.ok) {
-        const notificationsData = await notificationsResponse.json();
-        if (notificationsData.success) {
-          setNotificationHistory(notificationsData.data || []);
-        }
-      } else {
-        throw new Error('Failed to fetch notifications');
-      }
+      const notificationsData: any = await api.get('/notifications');
+      const list = Array.isArray(notificationsData) ? notificationsData : (notificationsData?.data ?? []);
+      setNotificationHistory(list);
 
       // Fetch statistics
-      const statsResponse = await fetch('http://localhost:4000/api/notifications/stats', {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json();
-        if (statsData.success) {
-          setStatistics(statsData.data);
-        }
-      }
+      const statsData: any = await api.get('/notifications/stats');
+      setStatistics(statsData?.data || statsData || { sentThisMonth: 0, openRate: '0%', responseRate: '0%' });
     } catch (error) {
       console.error('Error refreshing data:', error);
       setError('Failed to refresh data. Please check if backend is running.');
@@ -213,38 +144,26 @@ const Notifications: React.FC = () => {
     setLoading(true);
     try {
       console.log('Sending notification:', notificationForm);
-      
-      const response = await fetch('http://localhost:4000/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(notificationForm)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data: any = await api.post('/notifications', notificationForm);
       console.log('Notification sent successfully:', data);
       
-      if (data.success) {
-        // Refresh notification history to show the new notification
-        await refreshData();
+      // Refresh notification history to show the new notification
+      await refreshData();
 
-        // Close modal and reset form
-        setIsCreateModalOpen(false);
-        setNotificationForm({
-          type: 'email',
-          recipients: 'all',
-          subject: '',
-          message: '',
-          scheduleDate: ''
-        });
-        
-        // Show success message (you can add a toast notification here)
-        console.log('Notification sent to', data.data.recipientCount, 'recipients');
+      // Close modal and reset form
+      setIsCreateModalOpen(false);
+      setNotificationForm({
+        type: 'email',
+        recipients: 'all',
+        subject: '',
+        message: '',
+        scheduleDate: ''
+      });
+      
+      // Optional: log recipient count if available
+      const recipientCount = data?.data?.recipientCount ?? data?.recipientCount;
+      if (recipientCount != null) {
+        console.log('Notification sent to', recipientCount, 'recipients');
       }
     } catch (error) {
       console.error('Error sending notification:', error);
