@@ -57,8 +57,12 @@ export const apiRequest = async (endpoint: string, options: RequestInit = {}) =>
         }
         return;
       }
-      
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      let message = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errBody = await response.json();
+        message = errBody?.message || errBody?.error || message;
+      } catch {}
+      throw new Error(message);
     }
 
     const result = await response.json();

@@ -45,6 +45,11 @@ exports.authenticate = (req, res, next) => {
     } else if (role === 'STUDENT') {
       decoded.role = 'STUDENT';
     }
+    // Normalize user identity fields for compatibility across controllers
+    // Some controllers use req.user.id, others use req.user.userId
+    if (decoded.id && !decoded.userId) {
+      decoded.userId = decoded.id;
+    }
     
     req.user = decoded;
     next();
@@ -91,6 +96,10 @@ exports.optionalAuthenticate = (req, res, next) => {
   
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Normalize identity fields here as well
+    if (decoded.id && !decoded.userId) {
+      decoded.userId = decoded.id;
+    }
     req.user = decoded;
     next();
   } catch (error) {

@@ -371,6 +371,18 @@ exports.signup = catchAsync(async (req, res) => {
       const admin = await prisma.admin.create({ 
         data: { name, email, phone, password: hashed } 
       });
+
+      // Auto-create a library for this admin
+      const { libraryName, libraryAddress, libraryDescription } = req.body;
+      const createdLibrary = await prisma.library.create({
+        data: {
+          name: libraryName || `${name}'s Library`,
+          address: libraryAddress || '',
+          description: libraryDescription || '',
+          phone: phone || '',
+          adminId: admin.id
+        }
+      });
       
       // Generate JWT token for immediate login
       const token = jwt.sign(
@@ -384,7 +396,8 @@ exports.signup = catchAsync(async (req, res) => {
         name: admin.name,
         email: admin.email,
         phone: admin.phone,
-        role: 'LIBRARY_OWNER'
+        role: 'LIBRARY_OWNER',
+        libraryId: createdLibrary.id
       };
 
       return res.status(201).json({ 

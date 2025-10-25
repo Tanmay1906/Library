@@ -21,6 +21,7 @@ const Signup: React.FC = () => {
     aadharReference: '',
     registrationNumber: '',
     libraryName: '',
+    libraryAddress: '',
     libraryDescription: '',
     libraryId: ''
   });
@@ -391,6 +392,19 @@ const Signup: React.FC = () => {
                             required
                           />
                         </div>
+                      </div>
+                      <div>
+                        <label htmlFor="libraryAddress" className="block text-sm font-medium text-gray-700 mb-2">
+                          Library Address (optional)
+                        </label>
+                        <input
+                          id="libraryAddress"
+                          type="text"
+                          value={formData.libraryAddress}
+                          onChange={(e) => setFormData(prev => ({ ...prev, libraryAddress: e.target.value }))}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Enter library address"
+                        />
                       </div>
                       <div>
                         <label htmlFor="libraryDescription" className="block text-sm font-medium text-gray-700 mb-2">
