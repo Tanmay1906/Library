@@ -4,12 +4,103 @@ import Card from '../../components/UI/Card';
 import Input from '../../components/UI/Input';
 import Button from '../../components/UI/Button';
 import { api } from '../../utils/api';
+
+type AssignedNumbersMap = Record<string, number[]>;
 /**
  * Add Student Page Component
  * Allows library owners to register new students with subscription plans
  * Features comprehensive form validation and payment configuration
  */
 const AddStudent: React.FC = () => {
+  const REG_STORAGE_KEY = 'assignedRegNumbersByPrefix';
+  const LEGACY_STORAGE_KEY = 'assignedRegNumbers';
+  const currentYear = new Date().getFullYear();
+  const defaultPrefix = `REG-${currentYear}-`;
+
+  const loadAssignedNumbers = (): AssignedNumbersMap => {
+    if (typeof window === 'undefined') {
+      return {};
+    }
+
+    let result: AssignedNumbersMap = {};
+
+    try {
+      const stored = localStorage.getItem(REG_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          Object.entries(parsed).forEach(([prefix, numbers]) => {
+            if (Array.isArray(numbers)) {
+              result[prefix] = numbers
+                .filter((value): value is number => typeof value === 'number')
+                .sort((a, b) => a - b);
+            }
+          });
+        }
+      }
+    } catch {
+      result = {};
+    }
+
+    try {
+      const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacyRaw) {
+        const legacyNumbers = JSON.parse(legacyRaw);
+        if (Array.isArray(legacyNumbers)) {
+          const cleaned = legacyNumbers.filter((value: any): value is number => typeof value === 'number');
+          if (cleaned.length) {
+            const merged = new Set(result[defaultPrefix] ?? []);
+            cleaned.forEach(number => merged.add(number));
+            result[defaultPrefix] = Array.from(merged).sort((a, b) => a - b);
+            localStorage.setItem(REG_STORAGE_KEY, JSON.stringify(result));
+          }
+        }
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore legacy migration failures
+    }
+
+    return result;
+  };
+
+  const saveAssignedNumbers = (map: AssignedNumbersMap) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    localStorage.setItem(REG_STORAGE_KEY, JSON.stringify(map));
+  };
+
+  const extractPrefixData = (registrationNumber?: string) => {
+    if (!registrationNumber) return null;
+    const match = registrationNumber.trim().match(/^([A-Za-z]+-\d{4}-)(\d+)$/);
+    if (!match) return null;
+    return {
+      prefix: match[1].toUpperCase(),
+      number: parseInt(match[2], 10)
+    };
+  };
+
+  const computeNextForPrefix = (map: AssignedNumbersMap, prefix: string) => {
+    const used = new Set(map[prefix] ?? []);
+    let next = 1;
+    while (used.has(next)) {
+      next++;
+    }
+    return `${prefix}${String(next).padStart(3, '0')}`;
+  };
+
+  const getNextRegNumber = (prefix = defaultPrefix) => {
+    if (typeof window === 'undefined') {
+      return `${prefix}${String(1).padStart(3, '0')}`;
+    }
+    const assignedMap = loadAssignedNumbers();
+    if (!assignedMap[prefix]) {
+      assignedMap[prefix] = [];
+    }
+    return computeNextForPrefix(assignedMap, prefix);
+  };
+
   // Helper to format price in INR
   const formatINR = (amount: number) => `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
   
@@ -39,37 +130,52 @@ const AddStudent: React.FC = () => {
     const syncRegistrationNumbers = async () => {
       try {
         console.log('🔄 Syncing registration numbers with backend...');
-        const data = await api.get('/students');
-        if (data) {
-          console.log('📊 Fetched students data:', data);
-          
-          const existingRegNumbers = data.data?.map((student: any) => {
-            const match = student.registrationNumber?.match(/REG-2025-(\d+)/);
-            return match ? parseInt(match[1], 10) : null;
-          }).filter((num: number | null) => num !== null) || [];
-          
-          console.log('🔢 Existing registration numbers:', existingRegNumbers);
-          
-          // Update localStorage with existing numbers
-          const currentAssigned = JSON.parse(localStorage.getItem('assignedRegNumbers') || '[]');
-          const allNumbers = [...new Set([...currentAssigned, ...existingRegNumbers])];
-          localStorage.setItem('assignedRegNumbers', JSON.stringify(allNumbers));
-          console.log('💾 Updated localStorage with numbers:', allNumbers);
-          
-          // Generate next available number
-          let nextNum = 1;
-          while (allNumbers.includes(nextNum)) {
-            nextNum++;
+        const response: any = await api.get('/students');
+        const studentsList = Array.isArray(response)
+          ? response
+          : Array.isArray((response as any)?.data)
+            ? (response as any).data
+            : [];
+
+        if (studentsList.length) {
+          console.log('📊 Fetched students data:', studentsList);
+
+          const assignedMap = loadAssignedNumbers();
+
+          studentsList.forEach((student: any) => {
+            const parsed = extractPrefixData(student?.registrationNumber);
+            if (parsed) {
+              const existingNumbers = new Set(assignedMap[parsed.prefix] ?? []);
+              existingNumbers.add(parsed.number);
+              assignedMap[parsed.prefix] = Array.from(existingNumbers).sort((a, b) => a - b);
+            }
+          });
+
+          const prefixToUse = assignedMap[defaultPrefix]
+            ? defaultPrefix
+            : Object.keys(assignedMap)[0] ?? defaultPrefix;
+
+          if (!assignedMap[prefixToUse]) {
+            assignedMap[prefixToUse] = [];
           }
-          const nextRegNumber = `REG-2025-${String(nextNum).padStart(3, '0')}`;
+
+          saveAssignedNumbers(assignedMap);
+
+          const nextRegNumber = computeNextForPrefix(assignedMap, prefixToUse);
           console.log('🆕 Next registration number:', nextRegNumber);
-          
-          // Update form with correct registration number
+
           setFormData(prev => ({
             ...prev,
             registrationNumber: nextRegNumber
           }));
           console.log('✅ Form updated with registration number:', nextRegNumber);
+        } else {
+          const fallbackRegNumber = getNextRegNumber();
+          setFormData(prev => ({
+            ...prev,
+            registrationNumber: fallbackRegNumber
+          }));
+          console.log('✅ Using generated registration number:', fallbackRegNumber);
         }
       } catch (error) {
         console.warn('⚠️ Could not sync registration numbers:', error);
@@ -85,23 +191,12 @@ const AddStudent: React.FC = () => {
     
     syncRegistrationNumbers();
   }, []);
-  // Get last registration number from localStorage or start at 1
-  // Now synced with backend data to avoid conflicts
-  const getNextRegNumber = () => {
-    const assignedNumbers = JSON.parse(localStorage.getItem('assignedRegNumbers') || '[]');
-    let nextNum = 1;
-    while (assignedNumbers.includes(nextNum)) {
-      nextNum++;
-    }
-    return `REG-2025-${String(nextNum).padStart(3, '0')}`;
-  };
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     aadharNumber: '',
-    registrationNumber: 'REG-2025-000', // Temporary, will be updated after sync
+    registrationNumber: getNextRegNumber(),
     subscriptionPlan: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom',
     customPrice: '',
     paymentMethod: 'one_time' as 'one_time' | 'emi',
@@ -186,16 +281,14 @@ const AddStudent: React.FC = () => {
     setError('');
 
     try {
-      // Prepare student data for API
-      // Generate a unique registration number as final safety check
-      const currentTime = Date.now();
-      const uniqueRegNumber = `REG-2025-${String(currentTime % 1000).padStart(3, '0')}`;
+      // Prepare student data for API using the auto-assigned registration number
+      const registrationNumberToUse = formData.registrationNumber || getNextRegNumber();
       
       const studentData = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
-        registrationNumber: uniqueRegNumber, // Use time-based unique number
+        registrationNumber: registrationNumberToUse,
         subscriptionPlan: formData.subscriptionPlan === 'monthly' ? 'MONTHLY' 
                         : formData.subscriptionPlan === 'quarterly' ? 'QUARTERLY'
                         : formData.subscriptionPlan === 'yearly' ? 'YEARLY'
@@ -210,12 +303,20 @@ const AddStudent: React.FC = () => {
       console.log('Student created successfully:', result);
 
       // Mark this registration number as assigned
-      const regNum = parseInt(formData.registrationNumber.split('-')[2], 10);
-      const assignedNumbers = JSON.parse(localStorage.getItem('assignedRegNumbers') || '[]');
-      if (!assignedNumbers.includes(regNum)) {
-        assignedNumbers.push(regNum);
-        localStorage.setItem('assignedRegNumbers', JSON.stringify(assignedNumbers));
+      const assignedMap = loadAssignedNumbers();
+      const parsedRegistration = extractPrefixData(registrationNumberToUse);
+      const nextPrefix = parsedRegistration?.prefix ?? defaultPrefix;
+
+      if (parsedRegistration) {
+        const numbersForPrefix = new Set(assignedMap[parsedRegistration.prefix] ?? []);
+        numbersForPrefix.add(parsedRegistration.number);
+        assignedMap[parsedRegistration.prefix] = Array.from(numbersForPrefix).sort((a, b) => a - b);
+        saveAssignedNumbers(assignedMap);
+      } else {
+        saveAssignedNumbers(assignedMap);
       }
+
+      const nextRegNumber = getNextRegNumber(nextPrefix);
 
       // Reset form
       setFormData({
@@ -223,7 +324,7 @@ const AddStudent: React.FC = () => {
         email: '',
         phone: '',
         aadharNumber: '',
-        registrationNumber: getNextRegNumber(),
+        registrationNumber: nextRegNumber,
         subscriptionPlan: 'monthly',
         customPrice: '',
         paymentMethod: 'one_time',

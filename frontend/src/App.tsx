@@ -57,7 +57,11 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   children, 
   requiredRole 
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
   
   // Optimized localStorage check - only when context is empty
   const [localStorageAuth, setLocalStorageAuth] = React.useState<any>(null);
@@ -84,9 +88,9 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: strin
   // Use context auth first, fallback to localStorage
   const effectiveUser = user || localStorageAuth;
   const effectiveAuth = isAuthenticated || (localStorageAuth && localStorage.getItem('token'));
-  
-  if (!effectiveAuth) {
-    return <Navigate to="/login" replace />;
+
+  if (isLoading || !effectiveAuth) {
+    return isLoading ? <LoadingSpinner /> : <Navigate to="/login" replace />;
   }
   
   if (requiredRole && effectiveUser?.role !== requiredRole) {

@@ -63,8 +63,12 @@ const StudentProfile: React.FC = () => {
     setError('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Make actual API call to update profile
+      await api.put('/profile', profileData);
+      
+      // Update local user data
+      const updatedUser = { ...user, ...profileData };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
       
       setIsEditing(false);
       setSuccess('Profile updated successfully!');
@@ -94,11 +98,15 @@ const StudentProfile: React.FC = () => {
     setError('');
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Make actual API call to update password
+      await api.put('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
       
       setIsChangingPassword(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setSuccess('Password changed successfully!');
       setSuccess('Password changed successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {

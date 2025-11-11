@@ -63,8 +63,9 @@ const LibraryInfo: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setLibrary(editData);
+      // Make actual API call to update library info
+      const updatedLibrary = await api.put('/library', editData);
+      setLibrary(updatedLibrary);
       setIsEditing(false);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);

@@ -45,14 +45,17 @@ const EditStudent: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Make actual API call to update student
+      await api.put(`/students/${student.id}`, formData);
       setSuccess(true);
+      
+      // Show success message and navigate back after a short delay
       setTimeout(() => {
-        navigate(-1); // Go back to students list
+        navigate('/library-owner/students');
       }, 1500);
     } catch (err) {
-      setError('Failed to update student. Please try again.');
+      console.error('Error updating student:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update student. Please try again.');
     } finally {
       setLoading(false);
     }
