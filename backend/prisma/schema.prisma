@@ -36,6 +36,20 @@ model Library {
   students    Student[]
 }
 
+model PasswordReset {
+  id                String   @id @default(cuid())
+  email             String   @db.VarChar(255)
+  token             String   @unique
+  tempPasswordHash  String?  @db.VarChar(255)
+  expiresAt         DateTime
+  used              Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([email])
+  @@map("password_resets")
+}
+
 model Student {
   id                 String           @id @default(cuid())
   name               String

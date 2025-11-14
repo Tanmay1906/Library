@@ -8,6 +8,7 @@ const bookController = require('./controllers/bookController');
 const libraryController = require('./controllers/libraryController');
 const subscriptionController = require('./controllers/subscriptionController');
 const notificationController = require('./controllers/notificationController');
+const passwordRoutes = require('./routes/password');
 const swaggerDocument = require('./docs/swagger.json');
 const { globalErrorHandler, AppError } = require('./middlewares/errorHandler');
 const { exec } = require('child_process');
@@ -142,6 +143,7 @@ app.get('/api/notification-templates', notificationController.getNotificationTem
 
 // API routes
 app.use('/api', routes);
+app.use('/api/password', passwordRoutes);
 
 // Reminder routes
 const reminderRoutes = require('../routes/reminderRoutes');

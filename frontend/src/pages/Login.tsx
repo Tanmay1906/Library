@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, BookOpen, Eye, EyeOff, Sparkles, Users, BarChart3, User, Building, CreditCard } from 'lucide-react';
 import { useAuth } from '../utils/AuthContext';
+import ForgotPassword from '../components/ForgotPassword';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -39,7 +41,7 @@ const Login: React.FC = () => {
     }
   };
 
-  return (
+  const loginForm = (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl">
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
@@ -169,6 +171,26 @@ const Login: React.FC = () => {
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                       </button>
                     </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex items-center">
+                        <input
+                          id="remember-me"
+                          name="remember-me"
+                          type="checkbox"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                          Remember me
+                        </label>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline focus:outline-none"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
                   </div>
 
                   {loginRole === 'student' && (
@@ -228,6 +250,16 @@ const Login: React.FC = () => {
         </div>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {loginForm}
+      <ForgotPassword 
+        isOpen={showForgotPassword} 
+        onClose={() => setShowForgotPassword(false)} 
+      />
+    </>
   );
 };
 

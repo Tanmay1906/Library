@@ -1,11 +1,110 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 const otpService = require('../services/otpService');
 const emailService = require('../services/emailService');
 const catchAsync = require('../middlewares/errorHandler').catchAsync;
 const ApiError = require('../middlewares/errorHandler').ApiError;
 const prisma = new PrismaClient();
+
+// Check if email exists in the system
+exports.checkEmail = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    throw new ApiError(400, 'Email is required');
+  }
+  
+  // Check in both student and admin tables
+  const [student, admin] = await Promise.all([
+    prisma.student.findUnique({ where: { email } }),
+    prisma.admin.findUnique({ where: { email } })
+  ]);
+  
+  const exists = !!(student || admin);
+  
+  res.json({ 
+    success: true, 
+    exists,
+    role: student ? 'student' : (admin ? 'admin' : null)
+  });
+});
+
+// Generate a password reset token
+exports.generatePasswordResetToken = catchAsync(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    throw new ApiError(400, 'Email is required');
+  }
+  
+  // Check if user exists
+  const [student, admin] = await Promise.all([
+    prisma.student.findUnique({ where: { email } }),
+    prisma.admin.findUnique({ where: { email } })
+  ]);
+  
+  if (!student && !admin) {
+    // For security, don't reveal if email exists or not
+    return res.json({ 
+      success: true, 
+      message: 'If an account exists with this email, you will receive a password reset link.' 
+    });
+  }
+  
+  const user = student || admin;
+  const token = uuidv4();
+  const tempPassword = Math.random().toString(36).slice(-8); // 8-character random string
+  const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
+  const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+  
+  console.log('Saving reset token to database...');
+  try {
+    // First, check if a reset record already exists for this email
+    const existingReset = await prisma.PasswordReset.findFirst({
+      where: { email }
+    });
+
+    if (existingReset) {
+      // Update existing record
+      await prisma.PasswordReset.update({
+        where: { id: existingReset.id },
+        data: { 
+          token, 
+          tempPasswordHash,
+          expiresAt,
+          used: false,
+          updatedAt: new Date()
+        }
+      });
+    } else {
+      // Create new record
+      await prisma.PasswordReset.create({
+        data: { 
+          email, 
+          token, 
+          tempPasswordHash,
+          expiresAt,
+          used: false
+        }
+      });
+    }
+    console.log('Reset token saved successfully');
+  } catch (dbError) {
+    console.error('Database error in generatePasswordResetToken:', dbError);
+    throw new ApiError(500, 'Failed to generate password reset token');
+  }
+  
+  // In a real application, you would send the temporary password via email
+  // For now, we'll include it in the response for testing
+  res.json({ 
+    success: true, 
+    token,
+    expiresAt,
+    tempPassword // Only for testing, remove in production
+  });
+});
 
 exports.login = catchAsync(async (req, res) => {
     const { email, password, role } = req.body;
@@ -43,11 +142,53 @@ exports.login = catchAsync(async (req, res) => {
       });
     }
     
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      return res.status(401).json({ 
-        success: false,
-        error: 'Invalid credentials' 
+    // First check if the password is valid
+    const validPassword = await bcrypt.compare(password, user.password);
+    
+    // If password is not valid, check if it's a temporary password
+    if (!validPassword) {
+      // Look for an active password reset token with a matching temporary password hash
+      const resetRecord = await prisma.PasswordReset.findFirst({
+        where: {
+          email: user.email,
+          used: false,
+          expiresAt: { gte: new Date() },
+          tempPasswordHash: { not: null }
+        },
+        orderBy: { expiresAt: 'desc' },
+        take: 1
+      });
+      
+      if (!resetRecord) {
+        return res.status(401).json({ 
+          success: false,
+          error: 'Invalid credentials' 
+        });
+      }
+      
+      // Verify the temporary password
+      const validTempPassword = await bcrypt.compare(password, resetRecord.tempPasswordHash);
+      if (!validTempPassword) {
+        return res.status(401).json({ 
+          success: false,
+          error: 'Invalid credentials' 
+        });
+      }
+      
+      // Mark the temporary password as used
+      await prisma.PasswordReset.update({
+        where: { id: resetRecord.id },
+        data: { used: true }
+      });
+      
+      // Force the user to change their password
+      return res.status(200).json({
+        success: true,
+        data: {
+          token: null,
+          requiresPasswordChange: true,
+          message: 'Please set a new password.'
+        }
       });
     }
 

@@ -340,4 +340,11 @@ class EmailService {
   }
 }
 
-module.exports = new EmailService();
+const emailService = new EmailService();
+
+// Export the transporter for development use
+if (process.env.NODE_ENV === 'development') {
+  module.exports.transporter = emailService.transporter;
+}
+
+module.exports = emailService;

@@ -4,6 +4,10 @@ const authController = require('../controllers/authController');
 const { validateLogin, validateSignup, validateOTP } = require('../middlewares/validation');
 const { authenticate } = require('../middlewares/auth');
 
+// Password reset endpoints
+router.post('/check-email', authController.checkEmail);
+router.post('/generate-token', authController.generatePasswordResetToken);
+
 router.post('/login', validateLogin, authController.login);
 router.post('/complete-login', authController.completeLogin);
 router.post('/signup', validateSignup, authController.signup);
