@@ -10,12 +10,23 @@ const generateResetToken = () => ({
   expiresAt: new Date(Date.now() + 3600000) // 1 hour from now
 });
 
+// Generate a temporary password
+const generateTempPassword = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@$!%*?&';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 // Send password reset email
-const sendPasswordResetEmail = async (email, token) => {
+const sendPasswordResetEmail = async (email, token, tempPassword) => {
   try {
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     console.log('Sending password reset email to:', email);
     console.log('Reset link:', resetLink);
+    console.log('Temporary password:', tempPassword);
     
     const emailResult = await sendEmail({
       to: email,
@@ -23,10 +34,20 @@ const sendPasswordResetEmail = async (email, token) => {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Password Reset Request</h2>
-          <p>You requested to reset your password. Click the link below to set a new password:</p>
+          <p>You requested to reset your password. You can use either option below:</p>
+          
+          <h3>Option 1: Use Temporary Password</h3>
+          <p>You can login immediately with this temporary password:</p>
+          <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 10px 0; text-align: center;">
+            <strong style="font-size: 18px; letter-spacing: 2px;">${tempPassword}</strong>
+          </div>
+          <p>After logging in, you'll be prompted to set a new password.</p>
+          
+          <h3>Option 2: Click Reset Link</h3>
+          <p>Or click the link below to set a new password directly:</p>
           <p>
-            <a href="${resetLink}" 
-              style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">
+            <a href="${resetLink}"
+               style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">
               Reset Password
             </a>
           </p>
@@ -58,31 +79,33 @@ const sendPasswordResetEmail = async (email, token) => {
 const requestPasswordReset = async (req, res) => {
   try {
     const { email } = req.body;
-
+    
     if (!email) {
       return res.status(400).json({ success: false, error: 'Email is required' });
     }
 
     // Check if user exists
-    const user = await prisma.student.findUnique({ where: { email } }) || 
+    const user = await prisma.student.findUnique({ where: { email } }) ||
                  await prisma.admin.findUnique({ where: { email } });
-
+    
     if (!user) {
       // For security, don't reveal if email exists or not
       return res.json({ success: true, message: 'If an account exists with this email, you will receive a password reset link.' });
     }
 
-    // Generate and save reset token
+    // Generate reset token and temporary password
     const { token, expiresAt } = generateResetToken();
+    const tempPassword = generateTempPassword();
+    const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
     
     await prisma.passwordReset.upsert({
       where: { email },
-      update: { token, expiresAt },
-      create: { email, token, expiresAt }
+      update: { token, expiresAt, tempPasswordHash, used: false },
+      create: { email, token, expiresAt, tempPasswordHash }
     });
 
-    // Send reset email
-    await sendPasswordResetEmail(email, token);
+    // Send reset email with temporary password
+    await sendPasswordResetEmail(email, token, tempPassword);
 
     // In development, include the Ethereal test account info
     const response = { 

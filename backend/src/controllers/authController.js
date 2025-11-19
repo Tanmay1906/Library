@@ -56,38 +56,23 @@ exports.generatePasswordResetToken = catchAsync(async (req, res) => {
   const user = student || admin;
   const token = uuidv4();
   const tempPassword = Math.random().toString(36).slice(-8); // 8-character random string
-  const tempPasswordHash = await bcrypt.hash(tempPassword, 10);
   const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
   
   console.log('Saving reset token to database...');
   try {
     // First, check if a reset record already exists for this email
-    const existingReset = await prisma.PasswordReset.findFirst({
-      where: { email }
+    const existingReset = await prisma.passwordReset.findFirst({
+      where: {
+        email,
+        used: false,
+        expiresAt: { gte: new Date() }
+      }
     });
 
     if (existingReset) {
-      // Update existing record
-      await prisma.PasswordReset.update({
+      await prisma.passwordReset.update({
         where: { id: existingReset.id },
-        data: { 
-          token, 
-          tempPasswordHash,
-          expiresAt,
-          used: false,
-          updatedAt: new Date()
-        }
-      });
-    } else {
-      // Create new record
-      await prisma.PasswordReset.create({
-        data: { 
-          email, 
-          token, 
-          tempPasswordHash,
-          expiresAt,
-          used: false
-        }
+        data: { used: true }
       });
     }
     console.log('Reset token saved successfully');
@@ -148,7 +133,7 @@ exports.login = catchAsync(async (req, res) => {
     // If password is not valid, check if it's a temporary password
     if (!validPassword) {
       // Look for an active password reset token with a matching temporary password hash
-      const resetRecord = await prisma.PasswordReset.findFirst({
+      const resetRecord = await prisma.passwordReset.findFirst({
         where: {
           email: user.email,
           used: false,
@@ -176,7 +161,7 @@ exports.login = catchAsync(async (req, res) => {
       }
       
       // Mark the temporary password as used
-      await prisma.PasswordReset.update({
+      await prisma.passwordReset.update({
         where: { id: resetRecord.id },
         data: { used: true }
       });
